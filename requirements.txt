@@ -1,0 +1,11 @@
+scikit-learn
+# local package
+-e .
+
+# external requirements
+click
+python-dotenv>=0.5.1
+tqdm
+joblib
+numpy
+pandas
