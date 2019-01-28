@@ -14,7 +14,7 @@ features = ['city_id', 'installments', 'merchant_id', 'state_id', 'subsector_id'
 
 
 def read_aggregated(chunk):
-    df = pd.read_pickle('./data/interim/aggregated_' + str(chunk) + '.csv')
+    df = pd.read_pickle('./data/interim/aggregated_' + str(chunk) + '.pkl')
     return df
 
 

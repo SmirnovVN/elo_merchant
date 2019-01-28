@@ -7,8 +7,8 @@ from dotenv import find_dotenv, load_dotenv
 from src.features.aggregate import read_aggregated
 
 
-def read_merged_test(chunk):
-    # df = pd.read_pickle('./data/interim/all_transactions_' + str(chunk) + '.csv')
+def read_merged():
+    df = pd.read_pickle('./data/interim/merged.pkl')
     return df
 
 
@@ -32,10 +32,15 @@ def main():
     transactions_merchants = pd.merge(transactions, merchants, how='left',
                                       left_on=['most_frequent_merchant_id'], right_on=['merchant_id'])
 
-    pd.merge(train, transactions_merchants, how='left', on=['card_id']).to_pickle('./data/interim/merged_train.pkl')
-    pd.merge(test, transactions_merchants, how='left', on=['card_id']).to_pickle('./data/interim/merged_test.pkl')
+    train = pd.merge(train, transactions_merchants, how='left', on=['card_id'])
 
+    train['type'] = pd.Series('train')
 
+    test = pd.merge(test, transactions_merchants, how='left', on=['card_id'])
+
+    test['type'] = pd.Series('test')
+
+    pd.concat([train, test]).to_pickle('./data/interim/merged.pkl')
 
 
 if __name__ == '__main__':

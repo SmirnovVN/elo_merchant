@@ -36,6 +36,10 @@ data/interim/all_transactions_0.pkl: data/raw/new_merchant_transactions.csv data
 data/interim/aggregated_0.pkl: data/interim/all_transactions_0.pkl
 	$(PYTHON_INTERPRETER) src/features/aggregate.py
 
+## Merge all data
+data/interim/merged.pkl: data/interim/aggregated_0.pkl
+	$(PYTHON_INTERPRETER) src/features/merge.py
+
 ## Delete all compiled Python files
 clean:
 	find . -type f -name "*.py[co]" -delete
