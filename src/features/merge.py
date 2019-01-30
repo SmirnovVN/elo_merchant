@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 import logging
+import warnings
 import pandas as pd
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 
 from src.features.aggregate import read_aggregated
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def read_merged():
@@ -13,32 +16,30 @@ def read_merged():
 
 
 def main():
-    """ Makes transactions chunks from historical_transactions and new_merchant_transactions and save it to interim.
+    """ Merge all data.
     """
     logger = logging.getLogger(__name__)
-    logger.info('aggregate transactions chunks')
+    logger.info('merge transactions chunks')
 
     transactions = read_aggregated(0)
     for chunk in range(1, 8):
         logger.info(f'chunk {chunk!r}')
         transactions = pd.concat([transactions, read_aggregated(chunk)])
 
-    merchants = pd.read_csv('./data/raw/merchants.csv')
-
     train = pd.read_csv('./data/raw/train.csv')
 
     test = pd.read_csv('./data/raw/test.csv')
 
-    transactions_merchants = pd.merge(transactions, merchants, how='left',
-                                      left_on=['most_frequent_merchant_id'], right_on=['merchant_id'])
+    train = pd.merge(train, transactions, how='left', on=['card_id'])
 
-    train = pd.merge(train, transactions_merchants, how='left', on=['card_id'])
+    train['type'] = pd.Series('train', index=train.index)
 
-    train['type'] = pd.Series('train')
+    test = pd.merge(test, transactions, how='left', on=['card_id'])
 
-    test = pd.merge(test, transactions_merchants, how='left', on=['card_id'])
+    test['type'] = pd.Series('test', index=test.index)
 
-    test['type'] = pd.Series('test')
+    assert train.shape[0] == 201917
+    assert test.shape[0] == 123623
 
     pd.concat([train, test]).to_pickle('./data/interim/merged.pkl')
 

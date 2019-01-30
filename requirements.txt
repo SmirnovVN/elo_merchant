@@ -1,4 +1,3 @@
-scikit-learn
 # local package
 -e .
 
@@ -9,3 +8,7 @@ tqdm
 joblib
 numpy
 pandas
+matplotlib
+seaborn
+lightgbm
+scikit-learn

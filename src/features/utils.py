@@ -60,7 +60,7 @@ def modify_keys(dictionary, modifier):
     """Append modifier to each key from dict"""
     result = {}
     for key, value in dictionary.items():
-        result[modifier + str(key)] = value
+        result[modifier + '_' + str(key)] = value
     return result
 
 

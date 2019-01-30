@@ -40,6 +40,14 @@ data/interim/aggregated_0.pkl: data/interim/all_transactions_0.pkl
 data/interim/merged.pkl: data/interim/aggregated_0.pkl
 	$(PYTHON_INTERPRETER) src/features/merge.py
 
+## Make features
+data/processed/train.pkl: data/interim/merged.pkl
+	$(PYTHON_INTERPRETER) src/features/features.py
+
+reports/submission.csv: data/processed/train.pkl
+	$(PYTHON_INTERPRETER) src/models/lgb.py
+
+
 ## Delete all compiled Python files
 clean:
 	find . -type f -name "*.py[co]" -delete
