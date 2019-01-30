@@ -41,7 +41,8 @@ def display_importances(feature_importance_df_):
 
 
 def kfold_lightgbm(train_df, test_df, num_folds, stratified=False, debug=False):
-    print("Starting LightGBM. Train shape: {}, test shape: {}".format(train_df.shape, test_df.shape))
+    logger = logging.getLogger(__name__)
+    logger.info("Starting LightGBM. Train shape: {}, test shape: {}".format(train_df.shape, test_df.shape))
 
     # Cross validation model
     if stratified:
@@ -111,7 +112,7 @@ def kfold_lightgbm(train_df, test_df, num_folds, stratified=False, debug=False):
             reg.feature_importance(importance_type='gain', iteration=reg.best_iteration))
         fold_importance_df["fold"] = n_fold + 1
         feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
-        print('Fold %2d RMSE : %.6f' % (n_fold + 1, rmse(valid_y, oof_preds[valid_idx])))
+        logger.info('Fold %2d RMSE : %.6f' % (n_fold + 1, rmse(valid_y, oof_preds[valid_idx])))
         del reg, train_x, train_y, valid_x, valid_y
         gc.collect()
 

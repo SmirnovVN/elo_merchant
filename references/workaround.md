@@ -5,13 +5,5 @@
 * lgbm
 - fill nans
 - feature combos
-- try remove duplicates
-```        
-# transactions.reset_index(inplace=True)
-# transactions['ident'] = transactions.index
-# logger.info(f'shape {transactions_merchants.shape!r}')
-# transactions_merchants.drop_duplicates(subset=['ident'], keep='last', inplace=True)
-# logger.info(f'shape {transactions_merchants.shape!r}')
-# logger.info(f'indexes {transactions_merchants.ident.nunique()!r}')
-```
+- remove duplicates
 - check kernels

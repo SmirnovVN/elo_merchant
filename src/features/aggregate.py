@@ -83,10 +83,17 @@ def main():
         transactions['year'] = transactions.purchase_date.apply(lambda x: x.year - 2016)
 
         logger.info(f'merge {chunk!r}')
+        transactions.reset_index(inplace=True)
+        transactions['ident'] = transactions.index
         transactions_merchants = pd.merge(transactions, merchants, how='left',
                                           on=['merchant_id', 'subsector_id', 'merchant_category_id', 'city_id',
                                               'state_id'],
                                           suffixes=('_transaction', '_merchant'))
+
+        logger.info(f'shape {transactions_merchants.shape!r}')
+        transactions_merchants.drop_duplicates(subset=['ident'], keep='last', inplace=True)
+        logger.info(f'shape {transactions_merchants.shape!r}')
+        logger.info(f'indexes {transactions_merchants.ident.nunique()!r}')
 
         logger.info(f'sort {chunk!r}')
         transactions_merchants.sort_values('purchase_date', inplace=True)
