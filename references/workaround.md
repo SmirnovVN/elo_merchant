@@ -3,7 +3,7 @@
 * date to number of days from first
 * dummy encoding
 * lgbm
-- fill nans
+* remove duplicates
+* fill nans
 - feature combos
-- remove duplicates
 - check kernels

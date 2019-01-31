@@ -75,6 +75,13 @@ def main():
         transactions = read_chunk(chunk)
         logger.info(f'shape {transactions.shape!r}')
 
+        logger.info(f'fill nan {chunk!r}')
+        transactions['category_2'].fillna(1.0, inplace=True)
+        transactions['category_3'].fillna('A', inplace=True)
+        transactions['merchant_id'].fillna('M_ID_00a6ca8a8a', inplace=True)
+        transactions['installments'].replace(-1, pd.np.nan, inplace=True)
+        transactions['installments'].replace(999, pd.np.nan, inplace=True)
+
         logger.info(f'dates {chunk!r}')
         transactions.purchase_date = pd.to_datetime(transactions.purchase_date)
         transactions['day'] = transactions.purchase_date.apply(lambda x: x.day)
