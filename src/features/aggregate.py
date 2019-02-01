@@ -13,7 +13,9 @@ from src.features.utils import apply_parallel_without_concat, modify_keys, most_
 features = ['city_id', 'installments', 'merchant_id', 'state_id', 'subsector_id',
             'month_lag', 'day', 'week', 'month', 'year']
 
-numerical = ['purchase_amount', 'numerical_1', 'numerical_1', 'installments']
+numerical = ['purchase_amount', 'numerical_1', 'numerical_2', 'installments', 'day', 'week', 'month', 'year',
+             'month_diff', 'month_diff_lagged', 'most_recent_sales_range_num', 'most_recent_purchases_range_num',
+             'price', 'numerical_1_p_2', 'numerical_1_m_2', 'numerical_1_s_2', 'numerical_1_d_2']
 
 lag = ['month_lag', 'avg_sales_lag3', 'avg_purchases_lag3', 'active_months_lag3',
        'avg_sales_lag6', 'avg_purchases_lag6', 'active_months_lag6', 'avg_sales_lag12',
@@ -32,12 +34,15 @@ def read_aggregated(chunk):
 def aggregate_transactions(g):
     g['shifted'] = g.purchase_date.shift(1)
     g['gap'] = (g.purchase_date - g.shifted) / pd.Timedelta(hours=1) / 168
-    start = g.purchase_date.min()
-    end = g.purchase_date.max()
-    period = g.gap.mean()
-    aggregated = {'card_id': g.iloc[0].card_id, 'start': start, 'end': end,
-                  'duration': (end - start) / pd.Timedelta(hours=1) / 168,
-                  'frequency': 1 / period if period > 0 else 1}
+
+    aggregated = dict()
+    aggregated['card_id'] = g.iloc[0].card_id
+    aggregated['start'] = g.purchase_date.min()
+    aggregated['end'] = g.purchase_date.max()
+    aggregated['period'] = g.gap.mean()
+    aggregated['duration'] = (aggregated['end'] - aggregated['start']) / pd.Timedelta(hours=1) / 168
+    aggregated['frequency'] = 1 / aggregated['period'] if aggregated['period'] > 0 else 1
+    aggregated['transactions'] = len(g)
 
     # numerical features
     for column in numerical + lag:
@@ -49,14 +54,20 @@ def aggregate_transactions(g):
     for column in categorical:
         aggregated.update(modify_keys(g[column].value_counts().to_dict(), column))
 
-    # count all transactions
-    aggregated.update({'transactions': len(g)})
+    # combo features
+    aggregated['installments_by_day'] = aggregated['sum_installments'] / aggregated['duration']
+    aggregated['transactions_by_day'] = aggregated['transactions'] / aggregated['duration']
+    aggregated['purchase_amount_by_day'] = aggregated['sum_purchase_amount'] / aggregated['duration']
+    aggregated['price_by_day'] = aggregated['sum_price'] / aggregated['duration']
+    aggregated['purchase_amount_by_transactions'] = aggregated['sum_purchase_amount'] / aggregated['transactions']
+
+    all_features = list(set(features + numerical + lag + categorical))
 
     # get most frequent value
-    aggregated.update(modify_keys(g[features].agg(most_frequent).to_dict(), 'most_frequent'))
+    aggregated.update(modify_keys(g[all_features].agg(most_frequent).to_dict(), 'most_frequent'))
 
     # count unique values
-    aggregated.update(modify_keys(g[features].agg(nunique).to_dict(), 'nunique'))
+    aggregated.update(modify_keys(g[all_features].agg(nunique).to_dict(), 'nunique'))
 
     return aggregated
 
@@ -68,6 +79,10 @@ def main():
     logger.info('aggregate transactions chunks')
 
     merchants = pd.read_csv('./data/raw/merchants.csv')
+    merchants['most_recent_sales_range_num'] = merchants['most_recent_sales_range'].map(
+        {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1}).astype(int)
+    merchants['most_recent_purchases_range_num'] = merchants['most_recent_purchases_range'].map(
+        {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1}).astype(int)
 
     for chunk in range(8):
         gc.collect()
@@ -88,25 +103,34 @@ def main():
         transactions['week'] = transactions.purchase_date.apply(lambda x: ((x - datetime(x.year, 1, 1)).days // 7) + 1)
         transactions['month'] = transactions.purchase_date.apply(lambda x: x.month)
         transactions['year'] = transactions.purchase_date.apply(lambda x: x.year - 2016)
+        transactions['month_diff'] = (datetime.today() - transactions['purchase_date']).dt.days / 30
+        transactions['month_diff_lagged'] = transactions['month_diff'] + transactions['month_lag']
+        transactions['amount_month_ratio'] = transactions['purchase_amount'] / transactions['month_diff']
 
         logger.info(f'merge {chunk!r}')
         transactions.reset_index(inplace=True)
         transactions['ident'] = transactions.index
-        transactions_merchants = pd.merge(transactions, merchants, how='left',
-                                          on=['merchant_id', 'subsector_id', 'merchant_category_id', 'city_id',
-                                              'state_id'],
-                                          suffixes=('_transaction', '_merchant'))
+        t_m = pd.merge(transactions, merchants, how='left',
+                       on=['merchant_id', 'subsector_id', 'merchant_category_id', 'city_id',
+                           'state_id'],
+                       suffixes=('_transaction', '_merchant'))
 
-        logger.info(f'shape {transactions_merchants.shape!r}')
-        transactions_merchants.drop_duplicates(subset=['ident'], keep='last', inplace=True)
-        logger.info(f'shape {transactions_merchants.shape!r}')
-        logger.info(f'indexes {transactions_merchants.ident.nunique()!r}')
+        logger.info(f'shape {t_m.shape!r}')
+        t_m.drop_duplicates(subset=['ident'], keep='last', inplace=True)
+        logger.info(f'shape {t_m.shape!r}')
+        logger.info(f'indexes {t_m.ident.nunique()!r}')
 
         logger.info(f'sort {chunk!r}')
-        transactions_merchants.sort_values('purchase_date', inplace=True)
+        t_m.sort_values('purchase_date', inplace=True)
 
-        aggregated_dicts = apply_parallel_without_concat(transactions_merchants.groupby(by='card_id'),
-                                                         aggregate_transactions)
+        logger.info(f'features {chunk!r}')
+        t_m['price'] = t_m['purchase_amount'] / t_m['installments']
+        t_m['numerical_1_p_2'] = t_m['numerical_1'] + t_m['numerical_2']
+        t_m['numerical_1_s_2'] = t_m['numerical_1'] - t_m['numerical_2']
+        t_m['numerical_1_m_2'] = t_m['numerical_1'] * t_m['numerical_2']
+        t_m['numerical_1_d_2'] = t_m['numerical_1'] / t_m['numerical_2']
+
+        aggregated_dicts = apply_parallel_without_concat(t_m.groupby(by='card_id'), aggregate_transactions)
 
         pd.DataFrame(aggregated_dicts).to_pickle('./data/interim/aggregated_' + str(chunk) + '.pkl')
 

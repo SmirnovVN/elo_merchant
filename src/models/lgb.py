@@ -40,7 +40,7 @@ def display_importances(feature_importance_df_):
     plt.savefig('./reports/figures/lgbm_importances.png')
 
 
-def kfold_lightgbm(train_df, test_df, num_folds, stratified=False, debug=False):
+def kfold_lightgbm(train_df, test_df, num_folds, stratified=False):
     logger = logging.getLogger(__name__)
     logger.info("Starting LightGBM. Train shape: {}, test shape: {}".format(train_df.shape, test_df.shape))
 
@@ -119,11 +119,10 @@ def kfold_lightgbm(train_df, test_df, num_folds, stratified=False, debug=False):
     # display importances
     display_importances(feature_importance_df)
 
-    if not debug:
-        # save submission file
-        test_df.loc[:, 'target'] = sub_preds
-        test_df = test_df.reset_index()
-        test_df[['card_id', 'target']].to_csv('./reports/submission.csv', index=False)
+    # save submission file
+    test_df.loc[:, 'target'] = sub_preds
+    test_df = test_df.reset_index()
+    test_df[['card_id', 'target']].to_csv('./reports/submission_lgb.csv', index=False)
 
 
 def read_merged():
@@ -138,10 +137,8 @@ def main():
     logger.info('build lgb model')
 
     train_df = read_train()
-    train_df['outliers'] = 0
-    train_df.loc[train_df['target'] < -30, 'outliers'] = 1
     test_df = read_test()
-    kfold_lightgbm(train_df, test_df, num_folds=8, stratified=False, debug=False)
+    kfold_lightgbm(train_df, test_df, num_folds=8, stratified=False)
 
 
 if __name__ == '__main__':

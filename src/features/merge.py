@@ -33,6 +33,8 @@ def main():
     train = pd.merge(train, transactions, how='left', on=['card_id'])
 
     train['type'] = pd.Series('train', index=train.index)
+    train['outliers'] = 0
+    train.loc[train['target'] < -30, 'outliers'] = 1
 
     test = pd.merge(test, transactions, how='left', on=['card_id'])
 

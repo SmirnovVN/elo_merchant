@@ -5,5 +5,5 @@
 * lgbm
 * remove duplicates
 * fill nans
-- feature combos
-- check kernels
+* feature combos
+* check kernels

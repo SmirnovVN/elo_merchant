@@ -52,6 +52,8 @@ reports/submission.csv: data/processed/train.pkl
 clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
+	find . -type d -name "*.pkl" -delete
+	rm ./reports/submission.csv
 
 
 ## Set up python interpreter environment
