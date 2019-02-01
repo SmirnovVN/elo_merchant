@@ -54,7 +54,7 @@ def kfold_xgboost(train, test, num_folds, stratified=False):
 
         sub_preds += xgb_model.predict(xgb.DMatrix(test[feats]),
                                        ntree_limit=xgb_model.best_ntree_limit + 50) / folds.n_splits
-        logger.info('Fold %2d RMSE : %.6f' % (n_fold + 1, rmse(val_data, oof_preds[val_idx])))
+        logger.info('Fold %2d RMSE : %.6f' % (n_fold + 1, rmse(target.iloc[val_idx], oof_preds[val_idx])))
         del trn_data, val_data, watchlist
         gc.collect()
 
